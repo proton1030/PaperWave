@@ -1,0 +1,67 @@
+html(lang='en', style='background-color: #302E2E')
+    head
+        meta(charset='utf-8')
+        meta(http-equiv='X-UA-Compatible', content='IE=edge,chrome=1')
+        meta(name='viewport', content='width=device-width, initial-scale=1.0')
+        link(href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet")
+        link(href='https://fonts.googleapis.com/css?family=Roboto', rel='stylesheet')
+
+        script(type='text/javascript', src='https://code.jquery.com/jquery-2.1.1.min.js')
+        script(src='javascripts/loading.js')
+        link(type="text/css" rel="stylesheet" href="stylesheets/materialize.css"  media="screen,projection")
+    body
+        header
+
+            nav(style='background-color: #DF5A49')
+                .nav-wrapper
+                    .container
+                        ul#nav-mobile.right.hide-on-med-and-down
+                            li
+                                a(href='/') Home
+                            li
+                                a(href='/') Templates
+                            li
+                                a(href='/') More
+                    .container
+                        a.brand-logo  PaperWave
+
+        .card#uploadcard(style='background-color: #45B29D; top: 50px; width: 80%; margin:auto; paddind: auto; overflow: auto')
+            .card-content.white-text
+                span.card-title New PaperWave
+                p Take a picture of your modified template and upload!
+                    p
+                        form(action='#')
+                            .file-field.input-field(style='float: left; width: 50%')
+                                .btn
+                                    span File
+                                    input(type='file', multiple='')
+                                .file-path-wrapper
+                                    input.file-path.validate(type='text', placeholder='Upload one or more files')
+                            button.btn.waves-effect.waves-light(type='submit', name='action', style='height: 3rem; float: right; margin-top: 1rem; overflow: hidden') Upload
+
+
+
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js")
+
+
+
+
+//form(method='post', action='/auth')
+//  p.
+//  label Username:
+//  input(type='text', name='username').
+//  p.
+//  label Password:
+//  input(type='password', name='password').
+//  p.
+//  input(type='submit', value='Login').
+//
+
+//form(action="/upload", method="post", enctype="multipart/form-data")
+//  input(type="file", name="image")
+//  button(type="submit") Upload!
+//
+//h2#results
+//div(id="response")
+//
+
