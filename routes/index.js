@@ -2,11 +2,26 @@
 var projLocation = '/Users/hanyu/WebstormProjects/myapp/';
 var express = require('express');
 var bodyParser = require('body-parser');
-var hash = require('pbkdf2-password');
 var session = require('express-session');
 var upload = require('../routes/upload');
 var pythonShell = require('python-shell');
 var myPythonScriptPath = '/py/';
+var dbctrl = require('../db/data.js');
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
+var crypto = require('crypto');
+var sqlite3 = require('sqlite3').verbose();
+var db = new sqlite3.Database('db/paperwave.db');
+var check;
+
+
+
+const user = {
+    username: 'test',
+    password: 'pass',
+    id: 1
+};
+
 
 
 
@@ -41,33 +56,72 @@ var users = {
     tj: { name: 'tj' }
 };
 
-// when you create a user, generate a salt
-// and hash the password ('foobar' is the pass here)
 
-hash({ password: 'foobar' }, function (err, pass, salt, hash) {
-    if (err) throw err;
-    // store the salt & hash in the "db"
-    users.tj.salt = salt;
-    users.tj.hash = hash;
+function hashPassword(password, salt) {
+    var hash = crypto.createHash('sha256');
+    hash.update(password);
+    hash.update(salt);
+    return hash.digest('hex');
+}
+
+
+
+db.serialize(function() {
+
+    db.run("CREATE TABLE if not exists users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, salt TEXT)");
+
+
+    // db.each("SELECT rowid AS id, info FROM user_info", function(err, row) {
+    //     console.log(row.id + ": " + row.info);
+    // });
 });
+
+
+
+passport.use(new LocalStrategy(function(username, password, done) {
+    db.get('SELECT salt FROM users WHERE username = ?', username, function(err, row) {
+        if (!row) return done(null, false);
+        var hash = hashPassword(password, row.salt);
+        db.get('SELECT username, id FROM users WHERE username = ? AND password = ?', username, hash, function(err, row) {
+            if (!row) return done(null, false);
+            return done(null, row);
+        });
+    });
+}));
+
+passport.serializeUser(function(user, done) {
+    return done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+    db.get('SELECT id, username FROM users WHERE id = ?', id, function(err, row) {
+        if (!row) return done(null, false);
+        return done(null, row);
+    });
+});
+
+// ...
+
+app.post('/auth', passport.authenticate('local', { successRedirect: '/index',
+    failureRedirect: '/' }));
 
 
 // Authenticate using our plain-object database of doom!
 
-function authenticate(name, pass, fn) {
-    if (!module.parent) console.log('authenticating %s:%s', name, pass);
-    var user = users[name];
-    // query the db for the given username
-    if (!user) return fn(new Error('cannot find user'));
-    // apply the same algorithm to the POSTed password, applying
-    // the hash against the pass / salt, if there is a match we
-    // found the user
-    hash({ password: pass, salt: user.salt }, function (err, pass, salt, hash) {
-        if (err) return fn(err);
-        if (hash == user.hash) return fn(null, user);
-        fn(new Error('invalid password'));
-    });
-}
+// function authenticate(name, pass, fn) {
+//     if (!module.parent) console.log('authenticating %s:%s', name, pass);
+//     var user = users[name];
+//     // query the db for the given username
+//     if (!user) {
+//         return fn(new Error('cannot find user'))
+//     }
+//     else {
+//     // apply the same algorithm to the POSTed password, applying
+//     // the hash against the pass / salt, if there is a match we
+//     // found the user
+//
+//     }
+// }
 
 function restrict(req, res, next) {
     if(req.session.user) {
@@ -92,32 +146,38 @@ app.get('/logout', function(req, res){
 });
 
 
-app.post('/auth', function(req, res){
-    authenticate(req.body.username, req.body.password, function(err, user){
-        if (user) {
-            // Regenerate session when signing in
-            // to prevent fixation
-            req.session.regenerate(function(){
-                // Store the user's primary key
-                // in the session store to be retrieved,
-                // or in this case the entire user object
-                req.session.user = user;
-                req.session.success = 'Authenticated as ' + user.name
-                    + ' click to <a href="/logout">logout</a>. '
-                    + ' You may now access <a href="/restricted">/restricted</a>.';
-                res.redirect('back');
-            });
-        } else {
-            console.log("hahaha fool");
-            req.session.error = 'Authentication failed, please check your '
-                + ' username and password.'
-                + ' (use "tj" and "foobar")';
-            res.redirect('/');
-        }
-    });
-});
+// app.post('/auth', function(req, res){
+//     authenticate(req.body.username, req.body.password, function(err, user){
+//         if (user) {
+//             // Regenerate session when signing in
+//             // to prevent fixation
+//             req.session.regenerate(function(){
+//                 // Store the user's primary key
+//                 // in the session store to be retrieved,
+//                 // or in this case the entire user object
+//                 console.log('Success');
+//                 req.session.user = user;
+//                 req.session.success = 'Authenticated as ' + user.name
+//                     + ' click to <a href="/logout">logout</a>. '
+//                     + ' You may now access <a href="/restricted">/restricted</a>.';
+//                 res.render('index');
+//             });
+//         } else {
+//             console.log(err.message);
+//             req.session.error = 'Authentication failed, please check your '
+//                 + ' username and password.'
+//                 + ' (use "tj" and "foobar")';
+//             res.redirect('/');
+//         }
+//     });
+// });
 
 app.get('/', function(req, res){
+
+    res.render('index');
+});
+
+app.get('/index', function(req, res){
 
     res.render('index');
 });
@@ -127,7 +187,7 @@ app.get('/mobile.html', function(req, res){
     res.redirect('showingresult');
 });
 
-/* istanbul ignore next */
+
 if (!module.parent) {
     app.listen(3000);
     console.log('Express started on port 3000');
